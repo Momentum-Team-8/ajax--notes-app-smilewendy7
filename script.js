@@ -1,181 +1,135 @@
-/*globals fetch, moment */
-
+//global variables in DOM 
 const url = "http://localhost:3000/notes"
-const form = document.querySelector('#note-form')
-const noteList = document.querySelector('#note-list')
+const form = document.querySelector('.note-form')
 const noteText = document.getElementById('note-text').value
+const noteList = document.getElementById('note-list')
 
-// add event listener to submit 
-form.addEventListener('submit', event => {
 
+// click on *save* / edit note
+form.addEventListener('submit', event=> {
     event.preventDefault()
+
     const noteText = document.getElementById('note-text').value
-    //edit
-    if ( document.querySelector('#save-note').innerText === "edit"){
-        //refresh
-        location.reload()
+    const inputBox = document.getElementById('note-text')
+    // console.log("form submitted!",noteText)
+
+    if(document.querySelector('.save-note').innerText===("Edit Note"))
+    {
+        updateNote(noteList.childNodes[eval(form.id)-1])
+        // targetItem = noteList.childNodes[eval(form.id)-1]
+        console.log("chick on edit id", noteList.childNodes[eval(form.id)-1])
     }
 
-    //*** 
-    
-    else {console.log("here is my note",  noteText)
-    createNote(noteText)
-    }
-    
-})
+    else{postNote(noteText)}
 
+  })
 
-// removing a note from the dom 
-
+// click on delete 
 noteList.addEventListener("click", event=> {
-    // when user click delete run deleteNote()
-    if(event.target.classList.contains('delete')) {
-        deleteNote(event.target)
-        // console.log("this is target", event.target)
-    }
+   console.log("here is button content", event.target.innerText)
+   if(event.target.innerText=== "delete"){
+       deleteNote(event.target)
+   }
+
 })
 
-
-    //!!!!!!!!!!!edit a note from the dom ******>>>>
-        //click --> edit input --> save ---> update  
-// click link the id of note to edit ... 
-
+// click on edit 
 noteList.addEventListener("click", event=> {
-    // when user click edit run edit note()
-    if(event.target.classList.contains('edit')) {
-        // updateNote(event.target)
-        document.querySelector('#save-note').innerText = "edit"
-        // link the ID in dom with note ID .....**** noteID**** ??
-        // point to note # 
-        console.log("this is target", event.target)
-        updateNote(event.target)
+    if(event.target.innerText === "edit"){
+        document.querySelector('.save-note').innerText = "Edit Note"
+        form.id = event.target.parentElement.id
+        console.log("save button id is", form.id )
+    }
+ 
+ })
+
+
+// get + post + delete + edit ...... 2 works , then more .. 
+
+// *get*
+fetch (url)
+.then(res => res.json())
+.then(data=> {
+    for (let note of data) {
+        console.log(note.id)
+        displayNote(note)
     }
 })
 
-
-// list notes ... ????
-function listNotes(){
-    //get request 
-    fetch(url)
-        .then((res) =>  res.json())
-        .then((data)=> {
-            //loop tjrpigj array
-            for(let note of data){
-                console.log(note)
-                renderNoteItem(note)
-            }
+// *post* .... note: a random id will be generated.
+function postNote(noteText) {
+    fetch (url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+       title: noteText,
+       body: noteText,
+       create_at: moment().format()
     })
-}
+})
 
-// add note
-function createNote(noteText) {
-    //POST a new note to my data base
-    fetch(url, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            title: noteText,
-            body: noteText,
-            //using moment
-            create_at: moment().format()
-        })
-    })
     .then(response => response.json())
-    .then(data => renderNoteItem(data))
+    // ******* why below does not work????? ************* 
+    // post data here, undefined ************************ 
+
+    // .then(function(response){
+    //     response.json()
+    // })  
+    
+    .then(data => {
+        console.log("post data here," , data)
+        alert("new note is added")
+        displayNote(data)
+    })
 }
 
-function deleteNote(element){
-    //find note item to reomoce from the DOM
-    //delete it from the database by note id 
-    //???????????????????????????????????????????*******
+// *delete*
+function deleteNote (element) {
+    
+    console.log(element.parentElement.id )
     const noteId = element.parentElement.id 
     fetch(url + "/" + `${noteId}`, {
         method: 'DELETE'
-    }).then (() => element.parentElement.remove())
-
-    console.log(element.parentElement)
+    })
+    .then (()=> element.parentElement.remove())
 }
 
-//Update #####################!!!!!!!!!!!!*************************
-
-// Edit then update.... 
-    // first remove ,then add... 
-
+// *Update note*
 function updateNote(element){
     const noteText = document.getElementById('note-text').value
-    const noteId = element.parentElement.id
-    fetch(url + "/" + `${noteId}`, {
-        // ** -- replace old note content with new input 
-        //** -- save the new input to DOM and Json, show on the page
-        method: 'PATCH',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            //replace old note to new inputs ... 
-            title: noteText,
-            body: noteText,
-            //using moment
-            create_at: moment().format()
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log("I want this", data)
-        // then click on edit, save changes to dom  
-        //upate(data)
-        data=> element.parentElement.replace()
-        
+    const inputBox = document.getElementById('note-text')
+    const noteId = element.id
+    console.log("element id is ", element.id)
+        fetch(url + "/" + `${noteId}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                title: noteText,
+                body: noteText,
+                create_at: moment().format()
             })
+        })
+        .then(response => response.json())
+        .then (data=> {
+            console.log("update data is here", data)  
+            // element.replace()??? 
+            location.reload()
+        })
+        
+    }
+
+// display postted note on the page 
+
+function displayNote(note) {
+    noteItem = document.createElement('li')
+    noteItem.setAttribute('id', note.id)
+    noteItem.innerText = `${note.body}`
+    noteList.appendChild(noteItem)
+    editButton= document.createElement('button')
+    editButton.innerText = "edit"
+    noteItem.appendChild(editButton)
+    deleteButton= document.createElement('button')
+    deleteButton.innerText = "delete"
+    noteItem.appendChild(deleteButton)
+
 }
-
-// function update(content) {
-
-
-// }
-
-
-
-// rendering each note.. 
-function renderNoteItem(eachNote){
-    const itemEl = document.createElement('li')
-    itemEl.id = eachNote.id
-    renderNoteText(itemEl, eachNote)
-    noteList.appendChild(itemEl)
-}
-
-// what is noteListItem is the whole row ... 
-function renderNoteText(noteListItem, eachNote) {
-    
-    noteListItem.innerHTML = `<span class="dib w-60">${eachNote.body}</span><i class="ml2 dark-red fas fa-times delete"></i><i class="ml3 fas fa-edit edit"></i>`
-}
-
-listNotes();
-
-
-// if it is editing update input ,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
